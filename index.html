@@ -1,0 +1,857 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HAPPY BIRTHDAY nong poy 26 YEARS</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Mali:wght@400;600&family=Playfair+Display:ital,wght@1,700;1,800&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        :root { --wall: #1a1410; --linen: #efe8d8; --umber: #3a2a1c; --vermilion: #e2442b; --ochre: #f2b705; --ultra: #2f4fb8; --viridian: #1f8a70; --madder: #d9568a; }
+        body {
+            background-color: var(--wall);
+            color: #efe6d4;
+            font-family: 'Mali', 'Tahoma', 'Segoe UI', sans-serif;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            min-height: 100vh; min-height: 100dvh; overflow: hidden; text-align: center; user-select: none;
+        }
+        /* studio lighting + canvas grain over everything */
+        body::before { content: ''; position: fixed; inset: 0; z-index: 8; pointer-events: none;
+            background: radial-gradient(ellipse at 50% 42%, transparent 40%, rgba(0, 0, 0, 0.38) 100%); }
+        body::after { content: ''; position: fixed; inset: 0; z-index: 9; pointer-events: none; opacity: 0.5;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 1  0 0 0 0 .96  0 0 0 0 .88  .9 0 0 0 -.35'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url%28%23n%29'/%3E%3C/svg%3E"); }
+
+        /* --- Start screen: a blank primed canvas --- */
+        #ready-container { z-index: 2; display: flex; flex-direction: column; align-items: center; gap: 28px; }
+        .blank-canvas {
+            position: relative; width: min(82vw, 460px); min-height: 230px; padding: 44px 28px 30px;
+            background: var(--linen);
+            background-image: repeating-linear-gradient(0deg, rgba(60,40,20,.07) 0 1px, transparent 1px 3px), repeating-linear-gradient(90deg, rgba(60,40,20,.07) 0 1px, transparent 1px 3px);
+            box-shadow: 0 0 0 7px #5b3a20, 0 0 0 8px #2b1b0e, 0 22px 40px rgba(0,0,0,.6), inset 0 0 30px rgba(90,60,30,.18);
+            display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px;
+        }
+        .ready-title { font-size: 1.25rem; color: var(--umber); font-weight: 600; letter-spacing: 1px; min-height: 2rem; }
+        .cursor { display: inline-block; width: 9px; height: 1.3rem; vertical-align: middle; margin-left: 4px; background: var(--vermilion);
+            animation: blink 0.9s infinite, pigment 3.6s infinite; }
+        .brush { display: inline-block; width: 38px; height: 38px; vertical-align: -14px; margin-left: -4px; overflow: visible; transform-origin: 8% 92%; animation: paintWiggle .35s ease-in-out infinite alternate; filter: drop-shadow(1px 2px 1px rgba(0,0,0,.3)); }
+        .brush .tip { fill: var(--vermilion); animation: tipColor 3.6s infinite; }
+        .ink { display: inline-block; animation: inkIn .5s ease-out both; }
+        @keyframes paintWiggle { from { transform: rotate(-6deg) translateY(0); } to { transform: rotate(5deg) translateY(2px); } }
+        @keyframes tipColor { 0% { fill: #e2442b; } 25% { fill: #f2b705; } 50% { fill: #2f4fb8; } 75% { fill: #1f8a70; } 100% { fill: #e2442b; } }
+        @keyframes inkIn { from { color: #e2442b; opacity: 0; transform: translateY(-3px) scale(1.25); } 60% { opacity: 1; } to { color: var(--umber); opacity: 1; transform: none; } }
+        .stroke { width: min(70%, 240px); height: 22px; overflow: visible; }
+        .stroke path { fill: none; stroke: var(--vermilion); stroke-width: 5; stroke-linecap: round; stroke-dasharray: 1; stroke-dashoffset: 1; animation: draw 2.8s ease-in-out infinite; }
+        .ready-hint { font-family: 'Playfair Display', Georgia, serif; font-style: italic; font-size: 1.05rem; color: #b9ab94; animation: fadePulse 2s infinite ease-in-out; }
+
+        /* --- Countdown: paint splat --- */
+        #countdown-container { display: none; position: relative; width: min(62vw, 300px); aspect-ratio: 1; z-index: 2; --pig: var(--vermilion); --ink: #f7f1e4; }
+        #countdown-container[data-n="3"] { --pig: #e2442b; --ink: #f7f1e4; }
+        #countdown-container[data-n="2"] { --pig: #f2b705; --ink: #1a1410; }
+        #countdown-container[data-n="1"] { --pig: #2f4fb8; --ink: #f7f1e4; }
+        .blob { position: absolute; inset: 5%; background: var(--pig); border-radius: 61% 39% 52% 48% / 45% 58% 42% 55%; box-shadow: inset -8px -10px 18px rgba(0,0,0,.28), inset 6px 6px 14px rgba(255,255,255,.18), 0 14px 30px rgba(0,0,0,.5); }
+        .blob::before, .blob::after { content: ''; position: absolute; background: var(--pig); border-radius: 50%; }
+        .blob::before { width: 16%; height: 16%; left: -6%; bottom: 12%; }
+        .blob::after { width: 9%; height: 9%; right: -3%; top: 20%; }
+        #countdown-container.pop { animation: splat 0.55s cubic-bezier(.2, 1.5, .4, 1); }
+        #countdown-number { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+            font-family: 'Playfair Display', Georgia, serif; font-style: italic; font-weight: 800; font-size: clamp(6rem, 22vw, 9rem); color: var(--ink); }
+
+        #main-container { display: none; flex-direction: column; align-items: center; width: 100%; max-width: 800px; z-index: 2; position: relative; animation: fadeIn 0.8s ease; }
+
+        .title-large { font-family: 'Playfair Display', Georgia, serif; font-style: italic; font-weight: 800; font-size: clamp(2rem, 7vw, 3.4rem); letter-spacing: 2px; margin-bottom: 4px; line-height: 1.1; }
+        .title-large span { display: inline-block; text-shadow: 0 2px 0 rgba(0,0,0,.35); }
+        .title-large span:nth-child(odd) { transform: rotate(-2.5deg) translateY(1px); }
+        .title-large span:nth-child(even) { transform: rotate(2deg) translateY(-1px); }
+        .title-large .sp { width: 0.4em; }
+        .title-sub { font-family: 'Playfair Display', Georgia, serif; font-style: italic; font-size: 1.15rem; margin-bottom: 18px; color: #b9ab94; letter-spacing: 3px; }
+
+        canvas { position: absolute; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 1; }
+
+        .cake-container { position: relative; width: 280px; height: 240px; margin: 10px 0 4px; cursor: pointer; transition: opacity 0.8s ease; -webkit-tap-highlight-color: transparent; outline: none; }
+        #cake { overflow: visible; filter: drop-shadow(0 16px 12px rgba(0,0,0,.55)) drop-shadow(0 4px 3px rgba(0,0,0,.5)); transition: filter .15s ease; }
+        .lift { transition: transform .15s cubic-bezier(.3,1.6,.5,1); }
+        .cake-container:not(.blown):hover .lift { transform: translateY(-3px); }
+        .cake-container:not(.blown):hover #cake { filter: drop-shadow(0 22px 14px rgba(0,0,0,.5)) drop-shadow(0 6px 4px rgba(0,0,0,.45)) brightness(1.06); }
+        .cake-container:not(.blown):active .lift { transform: translateY(6px); transition-duration: .06s; }
+        .cake-container:not(.blown):active #cake { filter: drop-shadow(0 6px 5px rgba(0,0,0,.6)); }
+        .cake-container:focus-visible #cake { filter: drop-shadow(0 0 8px #f2b705) drop-shadow(0 16px 12px rgba(0,0,0,.55)); }
+        /* pulsing ring: invites the press */
+        .cake-container::before { content: ''; position: absolute; left: 6%; right: 6%; top: 34%; bottom: 8%; border-radius: 50%; z-index: -1; pointer-events: none;
+            border: 2px solid rgba(242,183,5,.55); animation: ring 1.8s ease-out infinite; }
+        .cake-container.blown::before { display: none; }
+        .cake-container.squish { animation: squish .5s cubic-bezier(.3,1.5,.5,1); }
+        .press-hint { font-family: 'Mali', 'Tahoma', sans-serif; font-size: .95rem; font-weight: 600; color: #f2b705; letter-spacing: 1px; margin-bottom: 14px; animation: bob 1.1s ease-in-out infinite; transition: opacity .3s; }
+        .press-hint.gone { opacity: 0; animation: none; }
+        #mute-btn { position: fixed; top: calc(env(safe-area-inset-top, 0px) + 14px); right: 14px; z-index: 10; width: 42px; height: 42px; border-radius: 50%; border: 2px solid rgba(239,232,216,.5);
+            background: rgba(26,20,16,.65); color: #f6eddc; font-size: 1.15rem; line-height: 1; cursor: pointer; display: none; align-items: center; justify-content: center; padding: 0; }
+        #mute-btn.show { display: flex; }
+        #mute-btn:hover { background: rgba(60,45,30,.85); }
+        #splash { position: fixed; inset: 0; width: 100%; height: 100%; z-index: 5; pointer-events: none; transition: opacity 1.4s ease; }
+        @keyframes ring { 0% { transform: scale(.85); opacity: .9; } 100% { transform: scale(1.3); opacity: 0; } }
+        @keyframes bob { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(5px); } }
+        @keyframes squish { 0% { transform: scale(1,1); } 25% { transform: scale(1.1,.86); } 55% { transform: scale(.94,1.08); } 100% { transform: scale(1,1); } }
+        .flame-group { transform-origin: center bottom; animation: flicker 0.2s infinite alternate; transition: opacity 0.5s ease, transform 0.5s ease; }
+        .flame-group.extinguished { opacity: 0; transform: scale(0); }
+        @keyframes flicker { 0% { transform: scale(1); } 100% { transform: scale(1.08); } }
+
+        .thai-message p + p { margin-top: 8px; }
+        #main-container .thai-message { font-size: 1.05rem; padding: 0 16px; line-height: 1.6; }
+        .swash { width: 130px; height: 10px; margin: 16px 0; }
+        .thai-message { font-family: 'Mali', 'Tahoma', 'Segoe UI', sans-serif; font-size: 1.2rem; font-weight: 600; color: #f1e8d6; letter-spacing: 0.5px; margin-bottom: 12px; }
+        .sub-message { font-family: 'Mali', 'Tahoma', 'Segoe UI', sans-serif; font-size: 0.9rem; color: #b9ab94; display: flex; align-items: center; justify-content: center; gap: 8px; }
+        .keycap { display: inline-block; font-family: 'Mali', monospace; font-size: 0.85rem; font-weight: 700; color: #2a1d12; background: #e8dcbc; padding: 3px 14px; transform: rotate(-2deg);
+            clip-path: polygon(0 0, 3% 12%, 0 25%, 3% 38%, 0 50%, 3% 62%, 0 75%, 3% 88%, 0 100%, 100% 100%, 97% 88%, 100% 75%, 97% 62%, 100% 50%, 97% 38%, 100% 25%, 97% 12%, 100% 0); }
+
+        /* --- Fullscreen portrait on a primed canvas --- */
+        .stage { position: fixed; inset: 0; height: 100vh; height: 100dvh; z-index: 3; display: none; flex-direction: column; background: var(--wall); animation: fadeIn 0.6s ease; }
+        .top { order: 2; flex: none; position: relative; z-index: 2; display: flex; flex-direction: column; align-items: center; gap: 8px; text-align: center; background: var(--wall);
+            padding: 2vh clamp(18px, 5vw, 80px) calc(env(safe-area-inset-bottom, 0px) + 2.2vh); box-shadow: 0 -6px 22px rgba(0,0,0,.55); pointer-events: none; }
+        .portrait { position: relative; flex: 1; min-height: 0; overflow: hidden; background: #b3b5b0; cursor: pointer; }
+        .paint-status { display: none; }
+        .portrait canvas { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; object-position: 50% 50%; image-rendering: pixelated; z-index: auto; }
+        .portrait::after { content: ''; position: absolute; inset: 0; pointer-events: none; mix-blend-mode: multiply;
+            background: repeating-linear-gradient(0deg, rgba(60,40,20,.07) 0 1px, transparent 1px 3px), repeating-linear-gradient(90deg, rgba(60,40,20,.07) 0 1px, transparent 1px 3px);
+            box-shadow: inset 0 0 90px rgba(60,35,10,.4); }
+        .wishes { max-width: 36em; font-family: 'Mali', 'Tahoma', 'Segoe UI', sans-serif; font-weight: 600; font-size: clamp(0.8rem, min(1.6vw, 2.6vh), 1.4rem); line-height: 1.5; color: #f6eddc; text-shadow: 0 2px 8px rgba(0,0,0,.75); }
+        .wishes { min-height: 3.4em; display: flex; align-items: center; justify-content: center; }
+        .wishes p.final { font-size: 1.25em; }
+        .wishes { position: relative; }
+        .wishes .wd { display: inline-block; white-space: nowrap; }
+        .wishes .wc { display: inline-block; opacity: 0; white-space: pre; }
+        .wishes .wc.on { animation: inkInW .45s ease-out both; }
+        .wishes .brush { position: absolute; left: 0; top: 0; width: 30px; height: 30px; margin: 0; vertical-align: baseline; pointer-events: none; transition: opacity .3s; z-index: 3; }
+        @keyframes inkInW { from { color: #e2442b; opacity: 0; transform: translateY(-3px) scale(1.3); } 60% { opacity: 1; } to { color: #f6eddc; opacity: 1; transform: none; } }
+        .wishes p::before { content: ''; display: inline-block; width: 0.5em; height: 0.5em; margin-right: 0.6em; vertical-align: 0.08em; border-radius: 50% 45% 55% 50%; background: var(--c); box-shadow: inset -1px -1px 2px rgba(0,0,0,.35), inset 1px 1px 2px rgba(255,255,255,.35); }
+        .wishes p:nth-child(1) { --c: #f2b705; }
+        .wishes p:nth-child(2) { --c: #e2442b; }
+        .top .sub-message { justify-content: center; flex-wrap: wrap; color: #e4d8c2; text-shadow: 0 1px 6px rgba(0,0,0,.7); }
+                
+        @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
+        @keyframes pigment { 0% { background-color: #e2442b; } 25% { background-color: #f2b705; } 50% { background-color: #2f4fb8; } 75% { background-color: #1f8a70; } 100% { background-color: #e2442b; } }
+        @keyframes draw { 0% { stroke-dashoffset: 1; opacity: 1; } 60% { stroke-dashoffset: 0; opacity: 1; } 90% { stroke-dashoffset: 0; opacity: 0; } 100% { stroke-dashoffset: 1; opacity: 0; } }
+        @keyframes splat { 0% { transform: scale(0.3) rotate(-12deg); } 100% { transform: scale(1) rotate(0); } }
+        @keyframes fadePulse { 0%, 100% { opacity: 0.45; } 50% { opacity: 1; } }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+    </style>
+</head>
+<body>
+    <canvas id="fireworks"></canvas>
+    <canvas id="splash"></canvas>
+    <button id="mute-btn" type="button" aria-label="เปิด/ปิดเสียงเพลง" onclick="event.stopPropagation(); toggleMute();">🔊</button>
+
+    <div id="ready-container">
+        <div class="blank-canvas">
+            <div class="ready-title"><span id="typed-text"></span><svg class="brush" viewBox="0 0 40 40" aria-hidden="true"><path d="M37 3 L17 24" stroke="#7a4a26" stroke-width="5" stroke-linecap="round"/><path d="M17 24 L12 29" stroke="#c4c8cf" stroke-width="6.5" stroke-linecap="round"/><path d="M12 29 C9 30 5 33 3 38 C9 37 14 35 15 32 Z" class="tip"/></svg></div>
+            <svg class="stroke" viewBox="0 0 200 20"><path pathLength="1" d="M4 12 C30 2 50 22 80 10 S130 4 160 12 S190 14 196 8"/></svg>
+        </div>
+        <div class="ready-hint">press any key to start</div>
+    </div>
+
+    <div id="countdown-container" data-n="3">
+        <div class="blob"></div>
+        <div id="countdown-number">3</div>
+    </div>
+
+    <div id="main-container">
+        <div class="title-large"><span style="color:#e2442b">H</span><span style="color:#f2b705">A</span><span style="color:#2f4fb8">P</span><span style="color:#1f8a70">P</span><span style="color:#d9568a">Y</span><span class="sp"></span><span style="color:#f4efe4">B</span><span style="color:#e7752b">I</span><span style="color:#e2442b">R</span><span style="color:#f2b705">T</span><span style="color:#2f4fb8">H</span><span style="color:#1f8a70">D</span><span style="color:#d9568a">A</span><span style="color:#f4efe4">Y</span></div>
+        <div class="title-sub">poy — 26</div>
+
+        <div class="cake-container" id="cake-box" role="button" tabindex="0" aria-label="เป่าเทียน">
+            <svg viewBox="0 0 300 240" width="100%" height="100%" id="cake">
+                <defs>
+                    <linearGradient id="wood" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#dcb083"/><stop offset="1" stop-color="#8d5f35"/></linearGradient>
+                    <linearGradient id="sheen" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff" stop-opacity=".38"/><stop offset=".45" stop-color="#fff" stop-opacity="0"/><stop offset="1" stop-color="#000" stop-opacity=".22"/></linearGradient>
+                </defs>
+                <!-- thickness of the board (extrusion) -->
+                <g class="ext">
+                    <path d="M30 150 C25 110 90 92 150 94 C215 96 282 108 280 152 C278 190 220 208 160 206 C135 205 128 192 110 190 C80 188 34 188 30 150 Z" transform="translate(0,9)" fill="#3a2410" stroke="#2b1b0e" stroke-width="2" stroke-linejoin="round"/>
+                    <path d="M30 150 C25 110 90 92 150 94 C215 96 282 108 280 152 C278 190 220 208 160 206 C135 205 128 192 110 190 C80 188 34 188 30 150 Z" transform="translate(0,6)" fill="#6b4524" stroke="#4a2f17" stroke-width="2" stroke-linejoin="round"/>
+                    <path d="M30 150 C25 110 90 92 150 94 C215 96 282 108 280 152 C278 190 220 208 160 206 C135 205 128 192 110 190 C80 188 34 188 30 150 Z" transform="translate(0,3)" fill="#7e5329" stroke="#4a2f17" stroke-width="2" stroke-linejoin="round"/>
+                </g>
+                <!-- top face: moves down when pressed -->
+                <g class="lift">
+                    <path d="M30 150 C25 110 90 92 150 94 C215 96 282 108 280 152 C278 190 220 208 160 206 C135 205 128 192 110 190 C80 188 34 188 30 150 Z" fill="url(#wood)" stroke="#5a3a1f" stroke-width="2"/>
+                    <path d="M30 150 C25 110 90 92 150 94 C215 96 282 108 280 152 C278 190 220 208 160 206 C135 205 128 192 110 190 C80 188 34 188 30 150 Z" fill="url(#sheen)"/>
+                    <path d="M36 142 C34 118 90 100 150 101 C205 102 262 112 274 140" fill="none" stroke="#fff" stroke-opacity=".38" stroke-width="2.2" stroke-linecap="round"/>
+                    <ellipse cx="238" cy="162" rx="13" ry="9" fill="#fff" fill-opacity=".28"/>
+                    <ellipse cx="238" cy="159.5" rx="13" ry="9" fill="#1a1410" stroke="#5a3a1f" stroke-width="1.5"/>
+                    <path d="M226 157 C228 151 248 150 250 157" fill="none" stroke="#000" stroke-opacity=".55" stroke-width="2"/>
+                <ellipse cx="124" cy="130.5" rx="12" ry="7" fill="#000" fill-opacity=".38"/>
+                <ellipse cx="124" cy="129.5" rx="12" ry="7" fill="#e2442b" style="filter:brightness(.62)"/>
+                <ellipse cx="124" cy="127.5" rx="12" ry="7" fill="#e2442b"/>
+                <ellipse cx="120.4" cy="125.05" rx="5.04" ry="1.9600000000000002" fill="#fff" fill-opacity=".5"/>
+                <ellipse cx="150" cy="136.5" rx="12" ry="7" fill="#000" fill-opacity=".38"/>
+                <ellipse cx="150" cy="135.5" rx="12" ry="7" fill="#f2b705" style="filter:brightness(.62)"/>
+                <ellipse cx="150" cy="133.5" rx="12" ry="7" fill="#f2b705"/>
+                <ellipse cx="146.4" cy="131.05" rx="5.04" ry="1.9600000000000002" fill="#fff" fill-opacity=".5"/>
+                <ellipse cx="176" cy="130.5" rx="12" ry="7" fill="#000" fill-opacity=".38"/>
+                <ellipse cx="176" cy="129.5" rx="12" ry="7" fill="#2f4fb8" style="filter:brightness(.62)"/>
+                <ellipse cx="176" cy="127.5" rx="12" ry="7" fill="#2f4fb8"/>
+                <ellipse cx="172.4" cy="125.05" rx="5.04" ry="1.9600000000000002" fill="#fff" fill-opacity=".5"/>
+                <ellipse cx="84" cy="160.5" rx="10" ry="6" fill="#000" fill-opacity=".38"/>
+                <ellipse cx="84" cy="159.5" rx="10" ry="6" fill="#1f8a70" style="filter:brightness(.62)"/>
+                <ellipse cx="84" cy="157.5" rx="10" ry="6" fill="#1f8a70"/>
+                <ellipse cx="81.0" cy="155.4" rx="4.2" ry="1.6800000000000002" fill="#fff" fill-opacity=".5"/>
+                <ellipse cx="62" cy="138.5" rx="9" ry="6" fill="#000" fill-opacity=".38"/>
+                <ellipse cx="62" cy="137.5" rx="9" ry="6" fill="#d9568a" style="filter:brightness(.62)"/>
+                <ellipse cx="62" cy="135.5" rx="9" ry="6" fill="#d9568a"/>
+                <ellipse cx="59.3" cy="133.4" rx="3.78" ry="1.6800000000000002" fill="#fff" fill-opacity=".5"/>
+                <ellipse cx="196" cy="172.5" rx="11" ry="6" fill="#000" fill-opacity=".38"/>
+                <ellipse cx="196" cy="171.5" rx="11" ry="6" fill="#f4efe4" style="filter:brightness(.62)"/>
+                <ellipse cx="196" cy="169.5" rx="11" ry="6" fill="#f4efe4"/>
+                <ellipse cx="192.7" cy="167.4" rx="4.62" ry="1.6800000000000002" fill="#fff" fill-opacity=".5"/>
+                <ellipse cx="212" cy="142.5" rx="9" ry="6" fill="#000" fill-opacity=".38"/>
+                <ellipse cx="212" cy="141.5" rx="9" ry="6" fill="#a4502a" style="filter:brightness(.62)"/>
+                <ellipse cx="212" cy="139.5" rx="9" ry="6" fill="#a4502a"/>
+                <ellipse cx="209.3" cy="137.4" rx="3.78" ry="1.6800000000000002" fill="#fff" fill-opacity=".5"/>
+                    <text x="132" y="188" font-family="'Playfair Display', Georgia, serif" font-style="italic" font-weight="700" font-size="20" fill="#3b2614" fill-opacity="0.8" text-anchor="middle" letter-spacing="3">2 5</text>
+                    <rect x="122" y="78" width="4" height="50" fill="#5b3a20"/>
+                <rect x="123.5" y="78" width="1.2" height="50" fill="rgba(255,255,255,0.25)"/>
+                <rect x="121" y="73" width="6" height="7" fill="#c4c8cf"/>
+                <path d="M121 73 C120 67 123 64 124 63 C125 64 128 67 127 73 Z" fill="#e2442b"/>
+                <rect x="148" y="70" width="4" height="58" fill="#5b3a20"/>
+                <rect x="149.5" y="70" width="1.2" height="58" fill="rgba(255,255,255,0.25)"/>
+                <rect x="147" y="65" width="6" height="7" fill="#c4c8cf"/>
+                <path d="M147 65 C146 59 149 56 150 55 C151 56 154 59 153 65 Z" fill="#f2b705"/>
+                <rect x="174" y="78" width="4" height="50" fill="#5b3a20"/>
+                <rect x="175.5" y="78" width="1.2" height="50" fill="rgba(255,255,255,0.25)"/>
+                <rect x="173" y="73" width="6" height="7" fill="#c4c8cf"/>
+                <path d="M173 73 C172 67 175 64 176 63 C177 64 180 67 179 73 Z" fill="#2f4fb8"/>
+                <g class="flame-group" id="flame-1" transform-origin="124 65">
+                    <ellipse cx="124" cy="58" rx="3.5" ry="6" fill="#ff7a2f" style="filter: drop-shadow(0 0 6px rgba(255, 140, 40, 0.85))" />
+                    <ellipse cx="124" cy="59" rx="1.5" ry="3.0" fill="#ffd98a" />
+                </g>
+                <g class="flame-group" id="flame-2" transform-origin="150 57">
+                    <ellipse cx="150" cy="50" rx="4" ry="7" fill="#ff7a2f" style="filter: drop-shadow(0 0 8px rgba(255, 140, 40, 0.85))" />
+                    <ellipse cx="150" cy="51" rx="1.7" ry="3.5" fill="#ffd98a" />
+                </g>
+                <g class="flame-group" id="flame-3" transform-origin="176 65">
+                    <ellipse cx="176" cy="58" rx="3.5" ry="6" fill="#ff7a2f" style="filter: drop-shadow(0 0 6px rgba(255, 140, 40, 0.85))" />
+                    <ellipse cx="176" cy="59" rx="1.5" ry="3.0" fill="#ffd98a" />
+                </g>
+            
+                </g>
+            </svg>
+        </div>
+        <div class="press-hint" id="press-hint">▲ กดที่จานสี (หรือเป่าใส่ไมค์) เพื่อเป่าเทียน ▲</div>
+
+    </div>
+
+    <div class="stage" id="stage">
+        <div class="portrait" id="portrait" title="คลิกเพื่อข้าม / ไปข้อความถัดไป">
+            <canvas id="pc" width="96" height="96"></canvas>
+            <canvas id="ph" width="96" height="96"></canvas>
+            <canvas id="pb" width="576" height="576"></canvas>
+        </div>
+        <div class="top">
+            <div class="wishes" id="wishes"></div>
+            <div class="sub-message">
+                ( กด <span class="keycap">ALT + F4</span> เพื่อออกไปใช้ชีวิต )
+            </div>
+        </div>
+        <div class="paint-status" id="paint-status"></div>
+    </div>
+
+    <script>
+        function fire(o) { try { if (typeof confetti === 'function') confetti(o); } catch (e) {} }   // ไม่มีเน็ต = ไม่มีกระดาษสี แต่โปรแกรมไม่ค้าง
+        function setCount(n) {
+            const c = document.getElementById('countdown-container');
+            c.dataset.n = n;
+            c.classList.remove('pop'); void c.offsetWidth; c.classList.add('pop');
+        }
+        let candleBlown = false;
+        let smokeParticles = [];
+        let audioStream = null;
+        let isStarted = false;
+
+        const textToType = "[ happy birth day nong poy .__. ]";
+        let typeIndex = 0;
+
+        function typeWriter() {
+            if (typeIndex < textToType.length) {
+                const ch = document.createElement('span');
+                ch.className = 'ink'; ch.textContent = textToType.charAt(typeIndex);
+                if (ch.textContent === ' ') ch.style.whiteSpace = 'pre';
+                document.getElementById("typed-text").appendChild(ch);
+                typeIndex++;
+                setTimeout(typeWriter, 50);
+            }
+        }
+
+        window.addEventListener('DOMContentLoaded', () => {
+            typeWriter();
+
+            navigator.mediaDevices.getUserMedia({ audio: true })
+                .then(stream => { audioStream = stream; })
+                .catch(err => { console.log('Mic denied or not available'); });
+
+            window.addEventListener('keydown', handleTriggerStart);
+            window.addEventListener('click', handleTriggerStart);
+        });
+
+        function handleTriggerStart() {
+            if (isStarted) return;
+            isStarted = true;
+            prepMusic();
+
+            window.removeEventListener('keydown', handleTriggerStart);
+            window.removeEventListener('click', handleTriggerStart);
+
+            document.getElementById('ready-container').style.display = 'none';
+            startCountdown();
+        }
+
+        function startCountdown() {
+            document.getElementById('countdown-container').style.display = 'block';
+            setCount(3);
+            let count = 3;
+            const countElem = document.getElementById('countdown-number');
+            const timer = setInterval(() => {
+                count--;
+                if (count > 0) {
+                    countElem.textContent = count;
+                    setCount(count);
+                } else {
+                    clearInterval(timer);
+                    document.getElementById('countdown-container').style.display = 'none';
+                    document.getElementById('main-container').style.display = 'flex';
+                    initFireworks();
+                    
+                    if (audioStream) {
+                        initMicBlow(audioStream);
+                    }
+                    
+                    window.addEventListener('keydown', (e) => {
+                        if (e.code === 'Space') extinguishCandles();
+                    });
+                    const cakeBox = document.getElementById('cake-box');
+                    cakeBox.addEventListener('click', extinguishCandles);
+                    cakeBox.addEventListener('keydown', (e) => { if (e.key === 'Enter') extinguishCandles(); });
+                }
+            }, 1000);
+        }
+
+        function initMicBlow(stream) {
+            const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            const analyser = audioContext.createAnalyser();
+            const microphone = audioContext.createMediaStreamSource(stream);
+            microphone.connect(analyser);
+            analyser.fftSize = 256;
+            const bufferLength = analyser.frequencyBinCount;
+            const dataArray = new Uint8Array(bufferLength);
+
+            function checkBlow() {
+                if (candleBlown) return;
+                analyser.getByteFrequencyData(dataArray);
+                let sum = 0;
+                for (let i = 0; i < bufferLength; i++) {
+                    sum += dataArray[i];
+                }
+                let average = sum / bufferLength;
+
+                if (average > 40) {
+                    extinguishCandles();
+                } else {
+                    requestAnimationFrame(checkBlow);
+                }
+            }
+            checkBlow();
+        }
+
+/* ---------- Happy Birthday (Web Audio, music-box tone) ---------- */
+        let musicCtx = null, musicMaster = null, songTimer = null, musicMuted = false;
+        function prepMusic() {
+            try {
+                if (!musicCtx) {
+                    musicCtx = new (window.AudioContext || window.webkitAudioContext)();
+                    musicMaster = musicCtx.createGain();
+                    musicMaster.gain.value = musicMuted ? 0 : 1;
+                    musicMaster.connect(musicCtx.destination);
+                }
+                musicCtx.resume();
+            } catch (e) {}
+        }
+        function playBirthday() {
+            prepMusic();
+            if (!musicCtx) return;
+            const F = { G4: 392, A4: 440, B4: 493.88, C5: 523.25, D5: 587.33, E5: 659.25, F5: 698.46, G5: 783.99 };
+            const song = [
+                ['G4', .75], ['G4', .25], ['A4', 1], ['G4', 1], ['C5', 1], ['B4', 2],
+                ['G4', .75], ['G4', .25], ['A4', 1], ['G4', 1], ['D5', 1], ['C5', 2],
+                ['G4', .75], ['G4', .25], ['G5', 1], ['E5', 1], ['C5', 1], ['B4', 1], ['A4', 1],
+                ['F5', .75], ['F5', .25], ['E5', 1], ['C5', 1], ['D5', 1], ['C5', 2.5]
+            ];
+            const beat = 0.5;
+            let t = musicCtx.currentTime + 0.35;
+            song.forEach(([n, d]) => {
+                const dur = d * beat;
+                [[1, 'triangle', 0.22], [2, 'sine', 0.07]].forEach(([mul, type, vol]) => {
+                    const o = musicCtx.createOscillator(), g = musicCtx.createGain();
+                    o.type = type; o.frequency.value = F[n] * mul;
+                    g.gain.setValueAtTime(0.0001, t);
+                    g.gain.exponentialRampToValueAtTime(vol, t + 0.015);
+                    g.gain.exponentialRampToValueAtTime(0.0001, t + dur * 1.5 + 0.25);
+                    o.connect(g).connect(musicMaster);
+                    o.start(t); o.stop(t + dur * 1.5 + 0.3);
+                });
+                t += dur;
+            });
+            // วนเล่นซ้ำไปเรื่อย ๆ: เว้นช่วงสั้น ๆ แล้วเริ่มรอบใหม่
+            clearTimeout(songTimer);
+            songTimer = setTimeout(playBirthday, (t - musicCtx.currentTime + 0.9) * 1000);
+        }
+        function toggleMute() {
+            musicMuted = !musicMuted;
+            if (musicMaster) musicMaster.gain.value = musicMuted ? 0 : 1;
+            document.getElementById('mute-btn').textContent = musicMuted ? '🔇' : '🔊';
+        }
+
+        function extinguishCandles() {
+            if (candleBlown) return;
+            candleBlown = true;
+
+            const flames = document.querySelectorAll('.flame-group');
+            flames.forEach(f => f.classList.add('extinguished'));
+
+            const box = document.getElementById('cake-box');
+            box.classList.add('blown');
+            box.classList.remove('squish'); void box.offsetWidth; box.classList.add('squish');
+            document.getElementById('press-hint').classList.add('gone');
+
+            const candlePositions = [[124, 65], [150, 57], [176, 65]].map(p => svgToScreen(p[0], p[1]));
+            candlePositions.forEach(pos => spawnSmoke(pos.x, pos.y));
+            paintSplash();
+            playBirthday();
+            document.getElementById('mute-btn').classList.add('show');
+
+            fire({
+                particleCount: 120,
+                spread: 90,
+                origin: { y: 0.65 },
+                colors: ['#e2442b', '#f2b705', '#2f4fb8', '#1f8a70', '#d9568a', '#f4efe4']
+            });
+            setTimeout(startPortrait, 1600);
+        }
+
+        /* ---------- paint splash: colour sprays off the palette ---------- */
+        const splashCv = document.getElementById('splash');
+        const sctx = splashCv.getContext('2d');
+        function sizeSplash() { splashCv.width = window.innerWidth; splashCv.height = window.innerHeight; }
+        sizeSplash();
+        window.addEventListener('resize', sizeSplash);
+
+        function svgToScreen(x, y) {
+            const r = document.getElementById('cake').getBoundingClientRect();
+            const k = Math.min(r.width / 300, r.height / 240);
+            return { x: r.left + (r.width - 300 * k) / 2 + x * k, y: r.top + (r.height - 240 * k) / 2 + y * k, k };
+        }
+        const DABS = [[124,128,'#e2442b',1.3],[150,134,'#f2b705',1.3],[176,128,'#2f4fb8',1.3],[84,158,'#1f8a70',1],[62,136,'#d9568a',1],[196,170,'#f4efe4',1],[212,140,'#c25a2e',1]];
+        let drops = [], splashRunning = false;
+
+        function stain(x, y, r, c, big) {
+            sctx.fillStyle = c;
+            sctx.beginPath(); sctx.arc(x, y, r, 0, Math.PI * 2); sctx.fill();
+            const n = big ? 6 : 2;
+            for (let i = 0; i < n; i++) {
+                const a = Math.random() * Math.PI * 2, d = r * (1.1 + Math.random() * 0.9), rr = r * (0.15 + Math.random() * 0.25);
+                sctx.beginPath(); sctx.arc(x + Math.cos(a) * d, y + Math.sin(a) * d, rr, 0, Math.PI * 2); sctx.fill();
+            }
+        }
+
+        function paintSplash() {
+            splashCv.style.opacity = 1;
+            sctx.clearRect(0, 0, splashCv.width, splashCv.height);
+            DABS.forEach(([cx, cy, c, power]) => {
+                const p = svgToScreen(cx, cy);
+                stain(p.x, p.y, 8 * p.k * power, c, true);
+                const n = Math.round(11 * power);
+                for (let i = 0; i < n; i++) {
+                    const a = -Math.PI / 2 + (Math.random() - 0.5) * Math.PI * 1.5;
+                    const v = (3 + Math.random() * 6) * power;
+                    drops.push({ x: p.x, y: p.y, vx: Math.cos(a) * v, vy: Math.sin(a) * v,
+                        r: 2 + Math.random() * 3.5 * power, c, life: 22 + Math.random() * 28 });
+                }
+            });
+            if (!splashRunning) { splashRunning = true; requestAnimationFrame(splashLoop); }
+        }
+
+        function splashLoop() {
+            const W = splashCv.width, H = splashCv.height;
+            sctx.save();
+            drops = drops.filter(d => {
+                d.x += d.vx; d.y += d.vy; d.vy += 0.3; d.vx *= 0.99; d.life--;
+                // each drop is a tiny round blob (no long trail); a short stretch along its motion keeps it lively
+                const ang = Math.atan2(d.vy, d.vx);
+                sctx.globalAlpha = 0.9;
+                sctx.fillStyle = d.c;
+                sctx.beginPath(); sctx.ellipse(d.x, d.y, d.r * 1.25, d.r, ang, 0, Math.PI * 2); sctx.fill();
+                if (d.life <= 0 || d.y > H || d.x < 0 || d.x > W) { stain(d.x, Math.min(d.y, H), d.r * 1.3, d.c, false); return false; }
+                return true;
+            });
+            sctx.restore();
+            if (drops.length) requestAnimationFrame(splashLoop); else splashRunning = false;
+        }
+
+        function spawnSmoke(x, y) {
+            for (let i = 0; i < 15; i++) {
+                smokeParticles.push({
+                    x: x + (Math.random() - 0.5) * 6,
+                    y: y,
+                    vx: (Math.random() - 0.5) * 0.8,
+                    vy: -Math.random() * 1.5 - 0.5,
+                    size: Math.random() * 4 + 2,
+                    alpha: Math.random() * 0.4 + 0.3,
+                    grow: Math.random() * 0.08 + 0.05
+                });
+            }
+        }
+
+        function initFireworks() {
+            const canvas = document.getElementById('fireworks');
+            const ctx = canvas.getContext('2d');
+            function resizeCanvas() {
+                canvas.width = window.innerWidth;
+                canvas.height = window.innerHeight;
+            }
+            resizeCanvas();
+            window.addEventListener('resize', resizeCanvas);
+
+            const colors = ['#e2442b', '#f2b705', '#2f4fb8', '#1f8a70', '#d9568a', '#f4efe4', '#e7752b'];
+            let particles = [];
+
+            class Particle {
+                constructor(x, y, color, splat) {
+                    this.x = x; this.y = y; this.color = color;
+                    const angle = Math.random() * Math.PI * 2;
+                    const speed = splat ? 0 : Math.random() * 2.6 + 0.8;
+                    this.vx = Math.cos(angle) * speed;
+                    this.vy = Math.sin(angle) * speed;
+                    this.size = splat ? Math.random() * 5 + 6 : Math.random() * 2.2 + 1.2;
+                    this.alpha = splat ? 0.8 : 1;
+                    this.decay = splat ? 0.006 : Math.random() * 0.014 + 0.008;
+                }
+                draw() {
+                    ctx.save();
+                    ctx.globalAlpha = this.alpha;
+                    ctx.beginPath();
+                    ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+                    ctx.fillStyle = this.color;
+                    ctx.fill();
+                    ctx.restore();
+                }
+                update() {
+                    this.x += this.vx;
+                    this.y += this.vy;
+                    this.vy += 0.03;
+                    this.alpha -= this.decay;
+                }
+            }
+
+            function addFireworkAt(x, y) {
+                const color = colors[Math.floor(Math.random() * colors.length)];
+                particles.push(new Particle(x, y, color, true));
+                for (let i = 0; i < 9; i++) {
+                    particles.push(new Particle(x, y, color, false));
+                }
+            }
+
+            window.addEventListener('click', (e) => {
+                if (isStarted && candleBlown) {
+                    addFireworkAt(e.clientX, e.clientY);
+                }
+            });
+
+            setInterval(() => {
+                const x = Math.random() * canvas.width;
+                const y = Math.random() * (canvas.height * 0.4);
+                addFireworkAt(x, y);
+            }, 2800);
+
+            function animate() {
+                ctx.fillStyle = 'rgba(26, 20, 16, 0.14)';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+                particles.forEach((p, index) => {
+                    if (p.alpha > 0) {
+                        p.update();
+                        p.draw();
+                    } else {
+                        particles.splice(index, 1);
+                    }
+                });
+
+                smokeParticles.forEach((s, index) => {
+                    if (s.alpha > 0) {
+                        ctx.save();
+                        ctx.globalAlpha = s.alpha;
+                        ctx.fillStyle = '#a89b8c';
+                        ctx.beginPath();
+                        ctx.arc(s.x, s.y, s.size, 0, Math.PI * 2);
+                        ctx.fill();
+                        ctx.restore();
+
+                        s.x += s.vx;
+                        s.y += s.vy;
+                        s.size += s.grow;
+                        s.alpha -= 0.005;
+                    } else {
+                        smokeParticles.splice(index, 1);
+                    }
+                });
+
+                requestAnimationFrame(animate);
+            }
+            animate();
+        }
+        /* ---------- Pixel portrait: brush paints one colour at a time ---------- */
+        const PN = 96, PS = 6, PD = "00000000000000000000000000000103030303030303030303030303030303030303030303030303030404040d322f303030303030303030303030302f2f302f2f2f30303030303030303030303030303030303030303030313131302f2f2f2f00000000000000000000000000000103030303030303030303030303030303030303030303030303030304040d322f302f2f30303030303030302f2f2d2d2d2d2f2f3030303030302f3030303030303030303130303031312f2f2f2e2d2e2d2d00000000000000000000000000000103030303030303030303030303030303030303030303030303030304040d322f302f303030303030303030302f2d2d2d2d2d2e2f30303030302f2f2f2f302f3030303131302f2f2f2f2e2c2d2e2d2c292700000000000000000000000000000103030303030303030303030303030303030303030303030303030304040d322f2f2f30303030303030303030302d2d2d2d2d2d2d2f302f2f2f2f2f2f2f2f2f3030302f2f2d2d2d2d2d2c2c29272421202000000000000000000000000000000103030303030303030303030303030303030303030303030303030304040d312d2f2f3030303030303030302f2f2d2d2d2d2d2d2d2d2f2f2f2f2f2f2f2f2f2f2f2d2d2d2c2c2c2c2c29262421201818181800000000000000000000000000000103030303030303030303030303030303030303030303030303030304040d312d2f2f2f2f2f30303030302f2f2f2d2d2d2d2d2d2e2e2e2e2e2e2e2e2e2e2d2d2c2c2c2c2c2927262120181818181818181800000000000000000000000000000103030303030303030303030303030303030303030303030303030304040d2f2d2d2f2f2f2f30303030302f2f2f2d2d2c2e2d2e2e2e2e2e2d2c2c2e2c2c2c2c2b292726242020181816161818181818181800000000000000000000000000000103030303030303030303030303030303030303030303030303030304040d2f2d2d2f2f2f2f302f3030302f2f2f2d2d2c2e2e2e2e2c2c2e2c2c2c2c2c29272524212018181616161516181818182020212500000000000000000000000000000103030303030303030303030303030303030303030303030303030404040d312d2d2d2f2f2f2d2f30302f2f2d2f2d2d2c2e2c2c2c2c2c2c292929262521201b1816161515151615181818202124272b2b2b00000000000000000000000000000103030303030303030303030303030303030303030303030303040404040d312d2d2d2f2f2d2d302f2f2f2f2f2d2d2c2c2c2c2b2b2929272521211b181616161516151616181818202425272b2b2b2b2b2b00000000000000000001000000000103030303030303030303030303030303030303030303030303040404040d312d2d2d2f2f2d2d2d2d2d2d2d2d2c2c2c28282927262421201818161515151616161818182021242629292b2b292b2b2b2b2900000000000000000000000000000103030303030303030303030303030303030303030303030303040404040d312c2d2d2f2f2d2d2d2d2d2d2d2c2b29292725212020181616151515151516181818202425272b2b2b2b2b2b2b2b292927252400000000000000000000000000000103030303030303030303030303030304030303030303030303040404040d312c2d2d2d2d2d2d2d2d2d2d2d2c262421201816161615151515151618182021242527292b292b2b2b2929292726242421202000000000000000000000000000000103030303030303030300000000000001030303040403030303040404040d2f2b2c2d2d2d2d2d2d2d2d2d2b242018161615151515151616182020242426262727272929292929272524242121202020202000000000000000000000000000000103030303030101000104040505050504040100000003040403040404040d2d292b2c2d2d2d2d2d2d2c2b27211815151818181818182021242626262626262626272726242421212020202020202020202000000000000000000000000000000103030303030404050d24292c2927262420160d090504000304040404040d2d292b2c2d2c2c2c2c2b29292524181618212524212526262727262625262525242424212020202020202020202020202020180000000000000000000000000000000101010000040404050615262c2b2524252524212015090403030404040d2b27272625252425292926262524202027292b292929272726262625242421202020202020202020202020202018181818181800000000000000000000000101000000000000000000000000000309202e2c27252524212121180904030404092124242020212020262b292727272627292929292929262524212120202020181818202020201820181818181818181818181800000000000000000000000000000000000000000000000000000000030926332f2e2f2f2c27242415060404091b1b2121212021242b2d2c2b29292b2926272929252421202020181818182018181820201818181818181818181818181818180000000000000000000104040505040000000000000000000000000000000309272f2c2f32302d2b2620090409211b24252525272c2d2d2c2b29292b292626262420201818182018181818181818181818181818181818181818181818181818000000000000000004050505060606060501000000000000000000000000000005152621252d302f2e2b260d0d2726292b292b2c2c2d2c2b29292929292624212020181818181818181818181616151616181818181818181818181818181820000000000000010405050505050506060606050000000000000000000000000100041b2720252d302f2f2e2b2121292c2c2b2b2b2c2c2b292727272627262524212018181818181615151515151515181818181818181818181820202124242400000000000305050505050505050606060606050400000000000000000000000304062426242b30312f2f2f2d2421292d2c2c2c2c2b29272726242125272727241818151515151515151515151515161818181818182020202424252525252600000000040505050505050505050606060605060605000000000000000000000103040d2825252c2f30312f2f2d2924272d2b2b2c2b29272725242124252120181515151515151515151515151616181820212425252627272727272729292b0000000405050505050505050505060608060506060605040000000000000000010304061b252626292d2f2f2f2f2d26212529292c2c2b29292724202018151515151515151515151515161818202020242b2d2d2d2c2b292929292b2b2b2b2c0000040505050505050505050506060a0a060606060606060500000000000000030304050d2125272727292c2f2f302d2524262b2c2c2b2b292927201818151515151515151516181818202020202024272d2d2d2c2c2b29292929292b2b2c2c0004050505050505050505050606060c0a07060606060606060501000000000103040404061b212527272727272c2f2f29262526272c2c292b2b29241818151515161818182020202121212120202021292d2d2c2c2c292929272727272b2c2c0405050505050505050505060606070a070707060606060606060503000000010304040405152121272727272625272b29272521212427292b2c2b272520182021242626262727272626272525202021292c2c2c2b2b29292726252425292b2c05050505050506050505050606060706060708070607070706060605030001010304040404091b2125282727272524242525252420202124272c2b2b2927272b2e2f2e2e2e2c2c2c2c2c292927212021292c2c2c2b292926252424242424272b0505050505060605050506060606070606070808070708080707070705030103040404040405152121272829272625242424252721202020242b2b2c2b2b2c2d2e2e2e2c2c2929292929292929212021292c2c2c2929272624212020202124290505060606060606060606070707060606070a0a080808080807070708050101040404040505091b2124282b292726252425272725202124262b2b2b292929292c2c2829292929292929292929212024292c2c2b2929262420151515151520250506060606070606060607070707060606060a0a08080a0a080807070808050003040404050509162121272c29272727272727272921202b2c2c2b2b2624252729282829292929292c2c2c292924212427292929292721200d04030505040d21060607070708070606060707070706060606080a0a0a0b0b0a08080808080805010404040505060d1b24242c2c29292727272727272720242c2c2c2c242024292828282828292829282828282621212121242124252420180500000000000520060707070808070707070707070707060607080b0a0a0b0b0b0a080808080a07040404040505060d161b24282e2c2b292727272727292520252c2c2c2420252928282a2828282828282826262421212121212121242421200900000000000924080808080808070708080808080707060607080e0e0c0e0e0e0b0a08080a0a0a0704040405050609151621272e2e2d2b292727272729292120292d2c2420252c2a282828282625242424222221212121212124242425252418090400040d21270a08080a0a08080808080a08080807070706070c0f0e0e0f0e0c0c0a0a0a0a0a0c070404050506090d151b252c31312d2b2b2929292b2b2720202b2c26212528282222222221212121211b21212121212124292b2b2b2927242109020924272b0a0a0a120c080a08080a0c0a080808070706070a110e0e0e0f0e0c0b0a0a0a0a0c0c0704040506070d0d1622283131302d2c2b2b2b2b2c2b252020272621222222222221212121211b1b1b1b1b2121262b2b2d2d2d2c2b2b272715050d2b2b2c0b0a0e190e080a0a0a0b0f0c0a0807070606070a100e0e0e110f0e0e0b0a0a0a0a0e1207040405060d0d0d1b22313231302d2c2c2c2c2c2c272521202421222222222121212121211b1b1b1b1b1b18242e2f2d2f2f302d2c2b2b2009162c2c2d0e0c12190e0a0a0a0a0e11110e0a0707060607080e101011110f0f0e0b0b0b0b0b0b121709050506090d0d15212d3332312f2f2d2c2c2c2c2b2626211b21222222212221211b1b181616152125160d152730303030302d2d2c2c2415202d2c2d0f0e19190f0c0c0b0b0e1111110c0807060707080c12111111110f0f0f0b0b0b0b0b0e1212100605090d0d151b2c33323231312d2c2c2c2c2b272527241b211b1b1b1b1615150d0d0d0d0d1621181515253230303030302d2d2d291824302d300f111a190f0f0f0b0b0c0f11110f0c08070707080a121212111111110f0b0b0b0b0b0e100f121b160d0d0d0d16263332323231302d2c2c2c2b292525292115150d0d0d0d0d0909090909090d150d18242c3030303030303030302b202530303011121c190f0f120f0e0c0f121412100e080707080a121212121111110f0e0b0e0b0b0c11100e120d071515151621313332323232302d2c2c2c2b292527291b0d090909090909090909090d161b16212f2f3030303030302d2d302b212930303012191914110f12110e0e0f11121412100b0807080a10141212121111110e0e0e0e0b0b10100e0c0806091615151b31333332333232302d2d2c2c2c2725272818090909090909090909090d242d2c2d2d2c303030302d2d27272d2c242c303030141c19120f0f14110f0f0f1112141917100a07080a10141313131212110f0e0e0e0b0b0e110f0c0c0707161b1b223133333333323232302d2d2c2c29262526261609090909090909090d16282e2f302d2d30302f2c2b2d2d272c2c272b303030191c19121111191411111214171c1c1c19100a0a0a0e141414141312110f0e0e0f0e0b0b0f100e0c0c070d2a3131333333333333333232312f2d2c2c2c2725292616090909090d0d0d0d1621272b2d302f2f302d2d2d2924292c29272c303030141c191111111419121112191c1e1a1714120e0a0a0c12191414141212110f0e0f0f0b0b0e0f0f0c0c0c1b2e313131333333333335333332312f2d2d2d2b252729261815181b1b1b1b1b161621252c303030302d2d3021162b2d27272b3030301219120e0e0f121411101217171712121211100e0b0e121a1914141212120f0e0e0e0b0b0c0f0f0f0c172a3131313131333333353533353332302f2f2d2c29262929272021272522262825262b2d3030313030302f302d2d30302d292b30303012110e0b0b0c0e0f0f0f1010101011111111110f0f0f121a1919191414120f0e0e0e0e0a0b0c0f0f0c101e23232a313131333535353535353332302f2e2d2c29292c292618202525282e2e312f303132323030303030303030302d272b303232110f0b0a0a0a0c0e0f0f101010111313111111111113141a1a19191414130f0f0e0e0e0b0a0b0e0e0e0c10171c1e232a31333435353535353332322f2f2e2d2c292b2b2b271b1b252c2e2e2f2f303232323230323232303030302d272b30323211100c0a0a0a0e1111121211121317171414131314141a1c1c1919141414110f0e0e0e0b0a0b0f0e0e0e0c121c1e1e23313333333335353533333232302e2e2c2b2b2b272c27181b272f2e2e2f313232323032323232323232322f272b3032301314100c0a0a0f12141412171e222222221e2223231e1c1c1c1a19141314120f0e0e0f0e0a0b0e0f0f0f0c0e191e1f1f2a313133333333333333333332302f2e2c2c2c27252d27161826313130313232323232323232323232322f27292d3021231e17100a0a1013141717232a2a2a221b22312a2a1f1c1a1c1c1a19131412100e0e0f0f0a0a0b0f0f11100e111e1f1f2331313133333335333335353332312f2d2d2d2c26272c251818213132323232323232323030303232322f272b2d30242a231e170a0a101314171e2a2a2a2a2823231e1e170f0e0f141c1c19141414110f0e0f100c0a0a0e0f0f111110191f23232e31313334343335333535353332312f2d2d2c29262628251b18202e323232323232323030303030302d292d303030232323170a0a101314171e1e2222221e1a171714100b0a0a121c1c19141414120f0f0e110f0b0a0b0f0f111211101c1f232a2e31313334333333333535333332302f2d2d2c29262527251b18202c3230303232303030302f2f2f2d2c2b2c2f2d171c170c07070a101417171a171717191c1d140e0a08080a0f1c1d1a14141914110f0e11110e0b0a0e0f0f121412121e232a2e2e31333333333334353534333232312f2d2d2d2b262527251b1b20292d2c30322f2b2c2d2c2e2b2525292c2f2f171a17080606070a10121417191a1c19120c0808080808080c1a1d1d1414191914110f11120f0b0a0b0f1010191910121f2a2a2a2e31333333333334343333333333312d2e2d2c29262526251b1b20242c2f2e2521212124242120242c302f2f100c0806060606070a0c0c0c0c0c0b08080707070708080a0b141f1d1a14191919120f1112110b0a0a0c0f0f111c121017232a2a2a2e31333334343434343334343332302f2f2d2c29252527251b1b202427241b1b1b160605151b242b302f2d08070605050606070808080808070707070707070707080a0b131d1f1c14191a1914111112120e0b0b0b0e0f0e191d121017232a2a2a3133333434343434353535343332312f2e2d2c2925272725201b2018151515150900000715182020202406060505050506070808080707070707070607070707080a0b111d1f1d14191a1c1911111414110b0b0b0b0e0e111d1c100c171f2a2a2a3133333535353535353534333332312f2f2d2c2625262725201b2015090909090505090915150d0d1506060505050607080b0c0a0707070707070707070707080a0b111d1f1f1a191c1c1a13111414120e0b0b0b0e0e0e141f1c100c121e2a2a2e3133343535353535353433343333312f2e2d292626262625212020150909090609090915150d0d0d0705050606060707070c0f0a07070707070707070708080a0e131c1f1f1d191c1d1c130f1314140f0b0b0b0e0e0e0e1c231e120c121e232a2a3133343435353435353434333333312f2f2c272625262525242121150909090909091515090d0d07060707070706050607100e080808080808080808080a0b0f131c1f1f1f1a1a1d1c1411141414110e0b0b0e0e0e0c101f231f1210121e2a2a2a313334353535353434343434343332312d2b2726252525252421211509090909091515090d0d07070a0a0a080707070811120a0a0a0a0a0a0a0a0a0a0b0f11131c1f1f231e1a1d1d1912121419120f0b0b0b0e0f0e0c1a23231f1710121e2a2a31313333343434343434353434333333302d2c272525252524242421150d0d0d0d181815151608080a0a0a0a0a0a0a0b12140b0a0a0a0a0a0a0a0a0b0b0f1113191d1f231f1a1c1d1a12121419140f0b0b0b0e0f0f0e0e1e23231f171217222a2e313233333334343434343434343433322f2e2b27262525252424242016181b2021201818180a08080a0a13130e0b0f14130e0a0a0a0a0a0a0a0b0b0e111113141d1f231f1c1c1d1c14121419190f0e0e0e0e0f0f0f0c1723231f1e171717222a3131323233343634343434343434343332312f2d292625252524242520161818201b15150d0c0a08080b10111314191412110f0a0a0a0a0a0a0a0b0e111111141c1f231f1c1a1d1d191414191c120e0e0e0e11120f0e101f2323231f1a171723313132323333343434343434343434333333312f2d292625252525252720161821201618180c0b0a0a0c0f1113141413131212100b0a0a0a0a0b0b0e0f1111141a1d1f231e1a1c1d1a14191a1c190f0f0f0e0f12110e0e1a232323231f17171e2a31313233343433343434343434343333333231302d2b27252526262727201820201818180c0b0a0a1113131314131112121212100e0b0a0b0b0e0e0f0f11131a1d1f1f1f1a1c1d1c14191c1c1a100f0f0f0f12110e0e121f232323231e1717222e2e313133343434343434343434333335353532302d29252525262627272018201818180f0c080b1113141414110f101110101010100b0b0b0e0e0e0f1113191d1e1f1f1c1a1d1c191a1c1d1c110f0f0f0f12110e0e0e1e23232323231e17172a2a313133333434363634343433333435353533312f2d272426252627292920201b161810100e0e111314141a1a1a14141313171e170c0b0b0c0e0e0f0f11141a1d1f1f1e1a1d1c191a1c1d1d1311110f0f12120f0e0e1a2323232323231e171e2a2a313333353436363434343433343535353332312f2d2625252527272c27202018160e131a140f1113141d1d1d1c191d1f232a1a0c0b0b0b0c0e0f0f11141a1d1f1f1f1a1c1d191a1c1d1e191111111113130f0f0e122323232323231f1c17222a2e313334343636363634343435353535353332312f2b2424252627292d252121180a0f14110a0a0c0e100c0c10101d23231e140e0b0b0b0e0e0e0f11141a1d1e1f1f1a1a1d1c1a1d1d1d1c1213131112130f0f0e101f23232a2323231f1717232a31333334343536363634343634353535353532322f2924242525272b2b2421210c0a0c0e0b080a0a0c0e111d1d1f1f1c14110e0b0b0b0e0e0e0f11141a1d1d1f1f1e1a1c1c1c1d1d1f1d141414121414110f0f101e23232a232323231e171e2a2a3133333435353636343434353535353535353332312c25212427292d2b24211a0c0b0e0f111113131a1d1d1d1d141211100f0e0b0e0e0e0e0f11141a1c1d1f1f1f1a1c1c1c1d1d1d1d141419141414110f0f101c2323232a2323231e1717232a2e3334343434363634343434353635353535353332312f252125262c2d272423170c0e0f13141d1d1d1d1d1a1311111010100f0e0e0e0e0f1113141a1c1d1f1f1f1c1c1c1c1d1d1d1f19191a1919191111110f172323232a2a2a231f1e171e2a2a313333343436363434343435363535353636353332312c252121292e2d272323100b0f111313131414130f0f10111110100f0e0e0f0f101113141a1d1d1f1f231e1a1c1c1c1d1d1f1c191c1a19191211110f1423232323232a23231e171a232a2e313333343434343435353636353636363635353332312c2421242b2e2c1e231e0a0a0e0f1113130f0e0e0f10101011100f0f101111111314191a1d1d1f1f1f1f1c1a1a1c1d1d1f1c191c1c1a1912111111121f232323232a2a23231e171e2a2a2e333334343434363535363535363636363535353232322b2421262c2d1a1f231008080b0e0e0b0b0e0f0f10111111101010101111111314191c1d1d1e1f1f231e1a1a1a1c1d1f1d1a1c1c1c1912121211101e232323232a2a23231e1a17232a2a3133333434343435353536363535353536363535333231292421272d191c231a08080a0b0b0c0e0f0f0f101111111010111111121314141a1c1c1d1e1f1f1f1f1a191a1c1c1f1d1c1d1c1c1a14121211101e2323232a2a2a2a231f1e17222a2a2e333334363535363635363636363535353636363533323129212427141a1e1c0a080a0b0b0e0e0e0e0f0f10100f101111111213141419191a1c1d1e1f1f1f1f1e19191c1c1f1d1c1d1d1d1a14141312101c232a2a2a2a2a2a23231e171a2a2a2e31333436353536363737373737363536363636363533323127212414191c1c0a080a0a0b0b0b0b0c0f0f0f0f10111111111213141419191a1c1c1d1e1f1f231f1c191a1a1e1d1c1e1e1d1a141414121017232a2a2a2a232323231f1c17232a2e2e313334353535363736363737373736363636363535343331272414191c1c0e08080a0a0a0b0b0b0e0e0f0f10111111111213141414191a1a1a1d1d1f1f1f231e1719191d1e1c1d1e1d1a141414121117232a2a2a2a23232323231e17222a2a3131333434343535363737363636363636363636363535353330291a14191d140a080a0a0a0a0b0b0c0e0e0f10111111111313141414191a1a1a1c1d1f1f1f23231c17191c1e1c1e1f1e1a141914121117232a2a2a2a2a2a2a2a231f1e1e2a2e31313234363435353637373737363636363636363635353533322f1c19141a1a110a08080a0a0a0b0b0c0e0f1011111213131314141419191a1a1c1d1e1f1f23231f17171a1e1c1e1e1d19191919121117232a2a2a2a2a2a2a2a23231e1a2a2e3131333334363536363737363636373636363637363636363535321e1d19191a1c120b0a0a0a0a0b0a0c0f11111212121213131414141419191a1c1d1e1e1f23231e1717191e1c1d1e1c19191a19141117232a2a2a2a2a2a2a232323171723313131313334343536363737363737363636363637363636363635351d1f1c1919191a190f080a0a07060c1713111111111112131314141414191a1a1c1e1e1f231e101212171c1c1d1f1c19191c19141212232a2a2a2a2a2a2a232323171023313131313334353537373636373737363636363637363636363636351a1c1f1c19191a1a120a0b0a0606171e1a12100f0f1111131313141414171a1a1c1e1f231f10101010171c1c1c1e1a191a1c19141212232a2a2a2a2a2a2a2a231f101023313131323334343537373636373737363636363637363636363636351c1c1e1e1c19191a19100a0a070717231e171110101111111313141414171a1a1e1e231f1010101010121a1c1c1d19191a1c191412121e2a2a2a2a2a2a2a2a231e0c0c23333333333334363636373737373737373636373737373636363636361e1f1e1e1e1a191919120a0807071023231e1411101111111214141414191a1c1f231e100d10101010121a1a1c1d1a191c1c191912171e22232a2a2a2a2a2a2a1e0a102a333333333334363436373736363637373636373737373636363636361d1f1f1f1e1c19191a12080809090d222a1f1c141111111112141419191a1c1e231e100d0d0d10101010171a1c1c19191c1c1a1914171e222323232a2a2a2a23170a172a333334343434343436363635363737373636363737373636363636361c1f1f231e1e1c1919140a080d0909172a2a1f1a13111111121419191a1c1e1f1e0d0d0d0d0d0d1010101219191a191a1d1c1a19171c1f22222323232a2a2a230c0c172a33312e313336353434373737363637373736363737373737363636361c1f23231f1f1e1919190e080c090910232a231e141212121314191a1d1e1f1709090d0d0d0d0d10101010171919191c1d1c1a19171e1f222223232323232a170a0e1e221615161b212c333434312e2821202f373636373737373737363637361e1f232323231f1c191910080c0c0c0c1b2a2a1e1a131212141a1c1d1d1f1709090909090d0d0d0d101010171714191c1c1c1a1a191e1e222223232322221f100a171e0d0d1b1b1b212227312e211b1b161627373637373737373736363637371e1e1f2323231f1e1919100c0c0c0c0c0d2231231e1a1414191c1d1f1f100909090909090d0d0d0d101010101212141c1c1a1a1a1a1e1e1e2222221e1e1f170a0c1d1709151b22222e2e262421211b1b161624373737373737373737373737371e1e1f232323231f1c19120c10100c090d17232a1f1e1c1a1d1f1f1f10090909090909090d0d0d0d0d1010101212191c1c1c1c1c1e1f1e1e221e1e1b1e1a0c0c141e170d1522282f3333332e241b1b211b161b333737373737373737373737371f1e1f23232323231e19120c1712100d0d0d151e23231e1e1e1f1e0c0909090909090909090d0d0d0d101010121217191a1c1c1c1f231f2222221e1e170c0b121c1c170d1528343535343636322c2e2f21161831373737373737373737373737", PC = ["#ffffff", "#fffffd", "#fbffff", "#fffff8", "#fffff2", "#f9efc4", "#e5ce9c", "#d6b985", "#cda76d", "#aca281", "#c1965b", "#bb8c52", "#b08b50", "#968f74", "#b08147", "#ac7942", "#a07742", "#a26d3a", "#986a36", "#9b6135", "#925e30", "#787468", "#70685e", "#846033", "#62615f", "#875928", "#835425", "#615647", "#7e4e1f", "#7d441c", "#67471c", "#633811", "#504e4b", "#4c4842", "#4f3e27", "#4e2f0a", "#3e3f39", "#3a3a33", "#383530", "#32332c", "#382c1e", "#2d2c28", "#342212", "#272a25", "#242520", "#20201b", "#221b16", "#1b1a15", "#161915", "#17130c", "#10100c", "#0d0904", "#0b0603", "#070703", "#060402", "#040202"];
+        const pcx = document.getElementById('pc').getContext('2d');
+        const pbx = document.getElementById('pb').getContext('2d');
+        const pstat = document.getElementById('paint-status');
+        const pidx = Array.from({ length: PN * PN }, (_, i) => parseInt(PD.substr(i * 2, 2), 16));
+        const pcnt = PC.map((_, i) => pidx.filter(v => v === i).length);
+        const porder = PC.map((_, i) => i).filter(i => pcnt[i]).sort((a, b) => pcnt[b] - pcnt[a]);
+        const ppaths = porder.map(col => {
+            const p = []; let flip = false;
+            for (let y = 0; y < PN; y++) {
+                const xs = [];
+                for (let x = 0; x < PN; x++) if (pidx[y * PN + x] === col) xs.push(x);
+                if (!xs.length) continue;
+                const r = [];
+                for (let x = xs[0]; x <= xs[xs.length - 1]; x++) r.push([x, y, pidx[y * PN + x] === col]);
+                if (flip) r.reverse();
+                flip = !flip;
+                p.push(...r);
+            }
+            return p;
+        });
+        const PASS_FRAMES = 2; // frames per colour pass (1 = fastest)
+        let paintRun = 0, paintDone = false;
+
+        function drawBrush(x, y, col) {
+            pbx.clearRect(0, 0, 576, 576);
+            pbx.save();
+            pbx.translate(x * PS + 3, y * PS + 3);
+            pbx.rotate(-0.8); pbx.scale(0.45, 0.45);
+            pbx.fillStyle = '#8a5a33'; pbx.fillRect(-5, -90, 10, 70);
+            pbx.fillStyle = '#c9ccd1'; pbx.fillRect(-7, -24, 14, 14);
+            pbx.fillStyle = col; pbx.fillRect(-7, -10, 14, 10);
+            pbx.restore();
+        }
+
+        function finishPortrait() {
+            paintRun++;
+            paintDone = true;
+            startHat();
+            pidx.forEach((v, i) => { pcx.fillStyle = PC[v]; pcx.fillRect(i % PN, (i / PN) | 0, 1, 1); });
+            pbx.clearRect(0, 0, 576, 576);
+            pstat.textContent = 'ครบ ' + porder.length + ' สี';
+        }
+
+        async function paintPortrait() {
+            const id = ++paintRun;
+            for (let k = 0; k < porder.length; k++) {
+                const col = porder[k], p = ppaths[k];
+                pstat.textContent = (k + 1) + ' / ' + porder.length;
+                const perFrame = Math.max(1, Math.ceil(p.length / PASS_FRAMES));
+                for (let i = 0; i < p.length;) {
+                    for (let j = 0; j < perFrame && i < p.length; j++, i++) {
+                        const [x, y, m] = p[i];
+                        if (m) { pcx.fillStyle = PC[col]; pcx.fillRect(x, y, 1, 1); }
+                    }
+                    const q = p[Math.min(i, p.length - 1)];
+                    drawBrush(q[0], q[1], PC[col]);
+                    await new Promise(r => requestAnimationFrame(r));
+                    if (id !== paintRun) return;
+                }
+            }
+            if (id === paintRun) await paintHatPass(id);
+            if (id === paintRun) finishPortrait();
+        }
+
+/* ---------- คำอวยพร: พู่กันเขียนทีละตัวอักษร (แก้ข้อความได้ที่ MESSAGES) ---------- */
+        const MESSAGES = [
+            'อัปเดตเป็นเวอร์ชัน 25.0 ขอให้บั๊กในชีวิตน้อยลง แต่ความสุขโหลดไวขึ้น',
+            'ขอให้เงินเข้าไวกว่าเน็ตหลุด และใจดีกับตัวเองเหมือนที่ใจดีกับคนอื่น',
+            'ขอให้แบตเต็มทุกเช้า wifi แรงทุกที่ และ deadline เลื่อนไปเรื่อย ๆ'
+        ];
+        const WRITE_MS = 55;      // ความเร็วพู่กันต่อ 1 ตัวอักษร
+        const HOLD_MS = 2400;     // เวลาค้างหลังเขียนจบแต่ละข้อความ
+        const WISH_DOTS = ['#f2b705', '#e2442b', '#2f4fb8', '#1f8a70', '#d9568a', '#e7752b'];
+        let wishIdx = -1, wishToken = 0;
+        const sleep = ms => new Promise(r => setTimeout(r, ms));
+
+        function makeBrush() {
+            const NS = 'http://www.w3.org/2000/svg';
+            const svg = document.createElementNS(NS, 'svg');
+            svg.setAttribute('viewBox', '0 0 40 40'); svg.setAttribute('class', 'brush');
+            svg.innerHTML = '<path d="M37 3 L17 24" stroke="#a9744a" stroke-width="5" stroke-linecap="round"/><path d="M17 24 L12 29" stroke="#c4c8cf" stroke-width="6.5" stroke-linecap="round"/><path d="M12 29 C9 30 5 33 3 38 C9 37 14 35 15 32 Z" class="tip"/>';
+            return svg;
+        }
+        function moveBrush(brush, el) {
+            const r = el.getBoundingClientRect(), b = brush.parentNode.getBoundingClientRect();
+            brush.style.left = (r.right - b.left - 3) + 'px';
+            brush.style.top = (r.bottom - b.top - 28) + 'px';
+        }
+
+        function showWish(i) {
+            const box = document.getElementById('wishes');
+            const token = ++wishToken;
+            wishIdx = i;
+            const old = box.querySelector('p');
+            const build = async () => {
+                if (token !== wishToken) return;
+                box.innerHTML = '';
+                const p = document.createElement('p'), chars = [];
+                p.style.setProperty('--c', WISH_DOTS[i % WISH_DOTS.length]);
+                const words = MESSAGES[i].split(' ');
+                words.forEach((w, wi) => {
+                    const wd = document.createElement('span'); wd.className = 'wd';
+                    (w.match(/\P{M}\p{M}*/gu) || []).forEach(ch => {      // ตัวอักษร + สระ/วรรณยุกต์ติดกัน
+                        const c = document.createElement('span'); c.className = 'wc'; c.textContent = ch;
+                        wd.appendChild(c); chars.push(c);
+                    });
+                    p.appendChild(wd);
+                    if (wi < words.length - 1) p.appendChild(document.createTextNode(' '));
+                });
+                const last = i === MESSAGES.length - 1;
+                if (last) p.classList.add('final');
+                box.appendChild(p);
+                const brush = makeBrush();
+                brush.style.opacity = 0;
+                box.appendChild(brush);
+                for (const c of chars) {
+                    if (token !== wishToken) return;
+                    c.classList.add('on');
+                    moveBrush(brush, c);
+                    brush.style.opacity = 1;
+                    await sleep(WRITE_MS);
+                }
+                if (token !== wishToken) return;
+                brush.style.opacity = 0;
+                if (last) {
+                    fire({ particleCount: 90, spread: 80, origin: { y: 0.9 }, colors: ['#e2442b', '#f2b705', '#2f4fb8', '#1f8a70', '#d9568a', '#f4efe4'] });
+                    return;
+                }
+                await sleep(HOLD_MS);
+                if (token === wishToken) showWish(i + 1);
+            };
+            if (old) { old.style.transition = 'opacity .35s'; old.style.opacity = 0; setTimeout(build, 350); }
+            else build();
+        }
+        function nextWish() { if (wishIdx < MESSAGES.length - 1) showWish(wishIdx + 1); }   // คลิกที่ภาพ = ข้ามไปข้อความถัดไป
+
+        /* ---------- pixel birthday hat: drops onto her head when the portrait is done ---------- */
+        const phx = document.getElementById('ph').getContext('2d');
+        const HAT_X = 10, HAT_Y = 7;           // วางหมวกบนศีรษะ (พิกเซลบนกริด 96x96)
+        function shade(hex, f) {
+            const n = parseInt(hex.slice(1), 16);
+            return '#' + [(n >> 16) & 255, (n >> 8) & 255, n & 255].map(v => Math.min(255, Math.round(v * f)).toString(16).padStart(2, '0')).join('');
+        }
+        function buildHat() {
+            // หมวกเอียงตามศีรษะ ขอบหมวกโค้งครอบหัว (ปลายขอบต่ำกว่ากลาง) มีเงาใต้ขอบทาบบนหน้าผาก
+            const W = 33, H = 32, g = Array.from({ length: H }, () => Array(W).fill(null));
+            const put = (x, y, c) => { if (x >= 0 && x < W && y >= 0 && y < H) g[y][x] = c; };
+            const stripes = ['#e2442b', '#f2b705', '#2f4fb8'];
+            const bx = 16, tx = 12, BR = 23, HW = 12, ROWS = 20;
+            const yb = x => BR + Math.round(Math.pow((x - bx) / HW, 2) * 3);   // แนวขอบหมวกที่โค้งตามหัว
+            for (let r = 0; r < ROWS; r++) {                                   // ตัวกรวย
+                const cxr = tx + (bx - tx) * (r / (ROWS - 1)), hw = 1 + (HW - 0.5) * (r / (ROWS - 1));
+                const x0 = Math.round(cxr - hw), x1 = Math.round(cxr + hw), y = 6 + r;
+                for (let x = x0; x <= x1; x++) {
+                    if (y >= yb(x)) continue;
+                    let c = stripes[((x + r) >> 2) % 3];
+                    if (x >= x1 - 1) c = shade(c, .72); else if (x === x0) c = shade(c, 1.18);
+                    put(x, y, c);
+                }
+            }
+            for (let dy = -2; dy <= 2; dy++) for (let dx = -2; dx <= 2; dx++) {   // ปอมปอม
+                if (dx * dx + dy * dy > 5) continue;
+                put(tx + dx, 3 + dy, dx + dy >= 2 ? '#a83a64' : '#d9568a');
+            }
+            put(tx - 1, 2, '#ffd6e6');
+            const fr = ['#e2442b', '#f2b705', '#2f4fb8', '#1f8a70', '#d9568a'];
+            for (let x = bx - HW; x <= bx + HW; x++) {                           // ขอบหมวก + ชายระบาย
+                const y = yb(x);
+                put(x, y, '#f6f0e2'); put(x, y + 1, '#d9cfb8');
+                if ((x - (bx - HW)) % 2 === 0) put(x, y + 2, fr[((x - (bx - HW)) / 2) % 5]);
+            }
+            const px = [];
+            for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+                if (g[y][x]) px.push([x, y, g[y][x]]);
+                else if ([[1,0],[-1,0],[0,1],[0,-1]].some(([a, b]) => g[y + b] && g[y + b][x + a])) px.push([x, y, '#2a1a10']);
+            }
+            for (let x = bx - HW; x <= bx + HW; x++) px.push([x, yb(x) + 3, 'rgba(0,0,0,0.3)']);   // เงาใต้ขอบหมวก
+            return px;
+        }
+        const HAT = buildHat();
+        const HAT_BRIM = 23;                     // แถวของขอบหมวก (จุดหมุนตอนโยก)
+        const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
+        let hatRun = false, hatFrame = 0, hatLast = 0;
+
+        /* พู่กันวาดหมวกเป็นส่วนหนึ่งของภาพ (ต่อจากสีสุดท้ายของภาพ) */
+        async function paintHatPass(id) {
+            const rows = {};
+            HAT.forEach(p => (rows[p[1]] = rows[p[1]] || []).push(p));
+            const seq = []; let flip = false;
+            Object.keys(rows).map(Number).sort((m, n) => m - n).forEach(y => {
+                const r = rows[y].sort((m, n) => m[0] - n[0]);
+                if (flip) r.reverse();
+                flip = !flip; seq.push(...r);
+            });
+            const perFrame = Math.ceil(seq.length / 24);
+            for (let i = 0; i < seq.length;) {
+                for (let j = 0; j < perFrame && i < seq.length; j++, i++) {
+                    const [x, y, c] = seq[i];
+                    phx.fillStyle = c; phx.fillRect(HAT_X + x, HAT_Y + y, 1, 1);
+                }
+                const q = seq[Math.min(i, seq.length - 1)];
+                drawBrush(HAT_X + q[0], HAT_Y + q[1], q[2]);
+                await new Promise(r => requestAnimationFrame(r));
+                if (id !== paintRun) return false;
+            }
+            pbx.clearRect(0, 0, 576, 576);
+            return true;
+        }
+
+        /* ภาพหยุดนิ่ง มีแค่หมวกที่ขยับ: ยอดหมวกโยกไปมา ปอมปอมเด้ง และกระโดดเบา ๆ */
+        function hatLoop(t) {
+            requestAnimationFrame(hatLoop);
+            if (t - hatLast < 33) return;           // ~30fps = ความรู้สึกพิกเซล
+            hatLast = t; hatFrame++;
+            phx.clearRect(0, 0, 96, 96);
+            const hop = (!reduceMotion && hatFrame % 50 < 4) ? -1 : 0;
+            const sway = reduceMotion ? 0 : Math.sin(hatFrame / 12) * 1.4;
+            HAT.forEach(([x, y, c]) => {
+                const k = y < HAT_BRIM ? (HAT_BRIM - y) / 22 : 0;
+                const dp = (y <= 5 && !reduceMotion && hatFrame % 20 < 10) ? 1 : 0;
+                phx.fillStyle = c;
+                phx.fillRect(HAT_X + x + Math.round(sway * k), HAT_Y + y + hop + dp, 1, 1);
+            });
+        }
+        function startHat() {
+            if (hatRun) return;
+            hatRun = true;
+            requestAnimationFrame(hatLoop);
+        }
+
+        function startPortrait() {
+            const main = document.getElementById('main-container');
+            main.style.transition = 'opacity 0.6s ease';
+            main.style.opacity = '0';
+            splashCv.style.opacity = '0';
+            setTimeout(() => {
+                main.style.display = 'none';
+                document.getElementById('stage').style.display = 'flex';
+                showWish(0);
+                if (matchMedia('(prefers-reduced-motion: reduce)').matches) finishPortrait();
+                else paintPortrait();
+            }, 600);
+        }
+        document.getElementById('portrait').addEventListener('click', () => { if (!paintDone) finishPortrait(); else nextWish(); });
+    </script>
+</body>
+</html>
