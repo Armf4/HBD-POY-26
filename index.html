@@ -147,7 +147,7 @@
             <div class="ready-title"><span id="typed-text"></span><svg class="brush" viewBox="0 0 40 40" aria-hidden="true"><path d="M37 3 L17 24" stroke="#7a4a26" stroke-width="5" stroke-linecap="round"/><path d="M17 24 L12 29" stroke="#c4c8cf" stroke-width="6.5" stroke-linecap="round"/><path d="M12 29 C9 30 5 33 3 38 C9 37 14 35 15 32 Z" class="tip"/></svg></div>
             <svg class="stroke" viewBox="0 0 200 20"><path pathLength="1" d="M4 12 C30 2 50 22 80 10 S130 4 160 12 S190 14 196 8"/></svg>
         </div>
-        <div class="ready-hint">press any key to start</div>
+        <div class="ready-hint">press any key to start<br>(มือถือ: แตะที่หน้าจอเพื่อเริ่ม)</div>
     </div>
 
     <div id="countdown-container" data-n="3">
@@ -284,12 +284,19 @@
         window.addEventListener('DOMContentLoaded', () => {
             typeWriter();
 
-            navigator.mediaDevices.getUserMedia({ audio: true })
-                .then(stream => { audioStream = stream; })
-                .catch(err => { console.log('Mic denied or not available'); });
-
+            // ผูกการแตะ/กดก่อนเสมอ (มือถือ/เบราว์เซอร์ในแอปอาจไม่มี mediaDevices แล้วโค้ดล้ม)
             window.addEventListener('keydown', handleTriggerStart);
             window.addEventListener('click', handleTriggerStart);
+            window.addEventListener('touchend', handleTriggerStart);
+            window.addEventListener('pointerup', handleTriggerStart);
+
+            try {
+                if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+                    navigator.mediaDevices.getUserMedia({ audio: true })
+                        .then(stream => { audioStream = stream; })
+                        .catch(err => { console.log('Mic denied or not available'); });
+                }
+            } catch (e) { console.log('Mic not available'); }
         });
 
         function handleTriggerStart() {
@@ -299,6 +306,8 @@
 
             window.removeEventListener('keydown', handleTriggerStart);
             window.removeEventListener('click', handleTriggerStart);
+            window.removeEventListener('touchend', handleTriggerStart);
+            window.removeEventListener('pointerup', handleTriggerStart);
 
             document.getElementById('ready-container').style.display = 'none';
             startCountdown();
